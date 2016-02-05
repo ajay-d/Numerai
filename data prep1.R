@@ -1,6 +1,7 @@
 rm(list=ls(all=TRUE))
 
 library(gbm)
+library(readr)
 library(dplyr)
 library(tidyr)
 library(purrr)
@@ -128,10 +129,15 @@ test.data.gbm <- train %>%
   filter(validation==1) %>%
   select(-ID, -validation)
 
-g.1 <- gbm(target ~ ., data=train.data.gbm, dist='bernoulli', n.trees=100,
+g.1 <- gbm(target ~ ., data=train.data.gbm, dist='bernoulli', n.trees=200,
            interaction.depth=1, n.minobsinnode=5, shrinkage=.001, train.fraction=.75,
            keep.data=TRUE, verbose=TRUE)
            #keep.data=FALSE, verbose=FALSE)
+
+
+g.2 <- gbm(target ~ ., data=train.data.gbm, dist='bernoulli', n.trees=200,
+           interaction.depth=2, n.minobsinnode=5, shrinkage=.001, train.fraction=.75,
+           keep.data=TRUE, verbose=TRUE)
 
 summary(g.1)
 best.iter <- gbm.perf(g.1, method='test')
@@ -139,7 +145,10 @@ print(best.iter)
 summary(g.1, n.trees=best.iter)
 
 gbm.1 <- predict(g.1, test.data.gbm, n.trees=best.iter, type="response")
+gbm.2 <- predict(g.2, test.data.gbm, n.trees=best.iter, type="response")
+
 ggplot(as.data.frame(gbm.1)) + geom_histogram(aes(gbm.1), binwidth = .0001)
+ggplot(as.data.frame(gbm.2)) + geom_histogram(aes(gbm.2), binwidth = .0001)
 
 ######
 #Score

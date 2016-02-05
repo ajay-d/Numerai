@@ -1,12 +1,14 @@
 rm(list=ls(all=TRUE))
 
-library(gbm)
+library(readr)
 library(dplyr)
 library(tidyr)
 library(purrr)
 library(ggplot2)
 library(xgboost)
 library(R.utils)
+library(SwarmSVM)
+library(rotationForest)
 
 options(mc.cores = parallel::detectCores(),
         stringsAsFactors = FALSE,
@@ -177,36 +179,95 @@ ggplot(as.data.frame(xgb.1)) + geom_histogram(aes(xgb.1), binwidth = .001)
 ggplot(as.data.frame(xgb.2)) + geom_histogram(aes(xgb.2), binwidth = .001)
 
 ######
-#GBM
+#Rotation Forest
 ######
 
-train.data.gbm <- train %>%
+train.data.rf <- train %>%
   filter(validation==0) %>%
-  select(-ID, -validation)
-test.data.gbm <- train %>%
+  select(-ID, -validation) %>%
+  mutate(target=as.factor(target)) %>%
+  select(target, starts_with("c_"), contains("m1"))
+
+test.data.rf <- train %>%
   filter(validation==1) %>%
-  select(-ID, -validation)
+  select(-ID, -validation) %>%
+  select(starts_with("c_"), contains("m1"))
 
-g.1 <- gbm(target ~ ., data=train.data.gbm, dist='bernoulli', n.trees=200,
-           interaction.depth=1, n.minobsinnode=5, shrinkage=.001, train.fraction=.75,
-           keep.data=TRUE, verbose=TRUE)
-           #keep.data=FALSE, verbose=FALSE)
+rf.1 <- rotationForest(x=train.data.rf %>% select(-target), 
+                       y=train.data.rf$target, 
+                       L = 10)
+rf.2 <- rotationForest(x=train.data.rf %>% select(-target), 
+                       y=train.data.rf$target, 
+                       L = 50)
 
+rf.1 <- predict(object=rf.1, newdata=test.data.rf)
+rf.2 <- predict(object=rf.2, newdata=test.data.rf)
 
-g.2 <- gbm(target ~ ., data=train.data.gbm, dist='bernoulli', n.trees=200,
-           interaction.depth=2, n.minobsinnode=5, shrinkage=.001, train.fraction=.75,
-           keep.data=TRUE, verbose=TRUE)
+ggplot(as.data.frame(rf.1)) + geom_histogram(aes(rf.1), binwidth = .001)
+ggplot(as.data.frame(rf.2)) + geom_histogram(aes(rf.2), binwidth = .001)
 
-summary(g.1)
-best.iter <- gbm.perf(g.1, method='test')
-print(best.iter)
-summary(g.1, n.trees=best.iter)
+summary(rf.1)
+summary(rf.2)
 
-gbm.1 <- predict(g.1, test.data.gbm, n.trees=best.iter, type="response")
-gbm.2 <- predict(g.2, test.data.gbm, n.trees=best.iter, type="response")
+######
+#SVM
+######
 
-ggplot(as.data.frame(gbm.1)) + geom_histogram(aes(gbm.1), binwidth = .0001)
-ggplot(as.data.frame(gbm.2)) + geom_histogram(aes(gbm.2), binwidth = .0001)
+train.data.svm <- train %>%
+  filter(validation==0) %>%
+  select(-ID, -validation) %>%
+  as.matrix
+
+test.data.svm <- train %>%
+  filter(validation==1) %>%
+  select(-ID, -validation) %>%
+  as.matrix
+
+csvm.obj = clusterSVM(x = train.data.svm[,-1], y = train.data.svm[,1], type = 1,
+                      valid.x = test.data.svm[,-1],valid.y = test.data.svm[,1], 
+                      seed = 2016, verbose = 1, centers = 8)
+
+csvm.obj$valid.score
+summary(csvm.obj)
+
+#Don't Stop Early
+##the kernel type: 1 for linear, 2 for polynomial, 3 for gaussian
+dcsvm.0 = dcSVM(x = train.data.svm[,-1], y = train.data.svm[,1],
+                k = 4, max.levels = 4, seed = 2016,
+                ##Try defaults
+                cost = 32, gamma = 2,
+                kernel = 3, early = 0, m = 800,
+                valid.x = test.data.svm[,-1], valid.y = test.data.svm[,1])
+#Early Stop
+dcsvm.1 = dcSVM(x = train.data.svm[,-1], y = train.data.svm[,1],
+                k = 4, max.levels = 4, seed = 2016, 
+                cost = 32, gamma = 2,
+                kernel = 3, early = 1, m = 800,
+                proba = TRUE,
+                valid.x = test.data.svm[,-1], valid.y = test.data.svm[,1])
+#Exact
+dcsvm.2 = dcSVM(x = train.data.svm[,-1], y = train.data.svm[,1],
+                k = 10, max.levels = 1, 
+                cost = 32, gamma = 2,
+                kernel = 2, early = 1, tolerance = 1e-2, m = 800, 
+                valid.x = test.data.svm[,-1], valid.y = test.data.svm[,1])
+
+dcsvm.0$valid.score
+dcsvm.1$valid.score
+dcsvm.2$valid.score
+
+preds = dcsvm.0$valid.pred
+table(preds, test.data.svm[,1])
+
+preds = dcsvm.1$valid.pred
+table(preds, test.data.svm[,1])
+
+gaterSVM.1 = gaterSVM(x = train.data.svm[,-1], y = train.data.svm[,1],
+                      hidden = 10, seed = 2016,
+                      m = 10, max.iter = 3, learningrate = 0.01, threshold = 1, stepmax = 1000,
+                      valid.x = test.data.svm[,-1], valid.y = test.data.svm[,1], verbose = TRUE)
+
+gaterSVM.1$valid.score
 
 ######
 #Score
