@@ -35,6 +35,8 @@ f.cor <- apply(f.cor, 2, function (x) ifelse(x==1,0,x))
 f.cor.max <- apply(f.cor, 1, max)
 f.cor.max
 
+ggplot(sample.submission) + geom_histogram(aes(probability), binwidth = .001)
+
 ggplot(train.full) + geom_histogram(aes(f1))
 ggplot(train.full) + geom_histogram(aes(f2))
 
@@ -243,7 +245,8 @@ dcsvm.1 = dcSVM(x = train.data.svm[,-1], y = train.data.svm[,1],
                 k = 4, max.levels = 4, seed = 2016, 
                 cost = 32, gamma = 2,
                 kernel = 3, early = 1, m = 800,
-                proba = TRUE,
+                #proba = TRUE,
+                cluster.method = "mlKmeans",
                 valid.x = test.data.svm[,-1], valid.y = test.data.svm[,1])
 #Exact
 dcsvm.2 = dcSVM(x = train.data.svm[,-1], y = train.data.svm[,1],
@@ -280,4 +283,4 @@ pred.1 <- train %>%
   bind_cols(as.data.frame(xgb.1)) %>%
   bind_cols(as.data.frame(xgb.2))
 
-
+save(bst.1, bst.2, file='gbm.1.RData')
