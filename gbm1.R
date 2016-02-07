@@ -7,8 +7,6 @@ library(purrr)
 library(ggplot2)
 library(xgboost)
 library(R.utils)
-library(SwarmSVM)
-library(rotationForest)
 
 options(mc.cores = parallel::detectCores(),
         stringsAsFactors = FALSE,
@@ -59,27 +57,27 @@ mn.variables <- train %>%
   summarise(m.1 = mean(value),
             sd.1 = sd(value)) %>%
   inner_join(train %>%
-              filter(validation==0) %>%
-              select(starts_with("f"), ID) %>%
-              gather(variable, value, -ID) %>% 
-              group_by(variable) %>%
-              summarise(m.2 = mean(value),
-                        sd.2 = sd(value))) %>%
+               filter(validation==0) %>%
+               select(starts_with("f"), ID) %>%
+               gather(variable, value, -ID) %>% 
+               group_by(variable) %>%
+               summarise(m.2 = mean(value),
+                         sd.2 = sd(value))) %>%
   inner_join(train %>%
-              filter(validation==1) %>%
-              select(starts_with("f"), ID) %>%
-              gather(variable, value, -ID) %>% 
-              group_by(variable) %>%
-              summarise(m.3 = mean(value),
-                        sd.3 = sd(value))) %>%
+               filter(validation==1) %>%
+               select(starts_with("f"), ID) %>%
+               gather(variable, value, -ID) %>% 
+               group_by(variable) %>%
+               summarise(m.3 = mean(value),
+                         sd.3 = sd(value))) %>%
   inner_join(train.full %>%
-              bind_rows(test.full) %>%
-              select(starts_with("f")) %>%
-              gather(variable, value) %>% 
-              group_by(variable) %>%
-              summarise(m.4 = mean(value),
-                        sd.4 = sd(value)))
-  
+               bind_rows(test.full) %>%
+               select(starts_with("f")) %>%
+               gather(variable, value) %>% 
+               group_by(variable) %>%
+               summarise(m.4 = mean(value),
+                         sd.4 = sd(value)))
+
 f.mn <- train %>%
   select(starts_with("f"), ID) %>%
   gather(variable, value, -ID) %>% 
@@ -133,6 +131,15 @@ train <- train %>%
   select(ID, validation, target, one_of(col.names)) %>%
   inner_join(f.all)
 
+#train data only, no validation
+train.1 <- train %>%
+  select(ID, validation, target, one_of(col.names)) %>%
+  inner_join(f.mn2)
+
+#all training data
+train.2 <- train %>%
+  select(ID, validation, target, one_of(col.names)) %>%
+  inner_join(f.mn1)
 
 ######
 #Split Data
@@ -193,106 +200,108 @@ quantile(xgb.2, c(0,.01, .05, .25, .5, .75, .95, .99, 1))
 quantile(xgb.3, c(0,.01, .05, .25, .5, .75, .95, .99, 1))
 
 ######
-#Rotation Forest
+#Split Data
 ######
 
-train.data.rf <- train %>%
+train.data.model.y <- train.1 %>%
   filter(validation==0) %>%
-  select(-ID, -validation) %>%
-  mutate(target=as.factor(target)) %>%
-  select(target, starts_with("c_"), contains("m1"))
-
-test.data.rf <- train %>%
+  select(target) %>%
+  as.matrix
+train.data.watch.y <- train.1 %>%
   filter(validation==1) %>%
-  select(-ID, -validation) %>%
-  select(starts_with("c_"), contains("m1"))
-
-rf.1 <- rotationForest(x=train.data.rf %>% select(-target), 
-                       y=train.data.rf$target, 
-                       L = 10)
-rf.2 <- rotationForest(x=train.data.rf %>% select(-target), 
-                       y=train.data.rf$target, 
-                       L = 50)
-
-rf.1 <- predict(object=rf.1, newdata=test.data.rf)
-rf.2 <- predict(object=rf.2, newdata=test.data.rf)
-
-ggplot(as.data.frame(rf.1)) + geom_histogram(aes(rf.1), binwidth = .001)
-ggplot(as.data.frame(rf.2)) + geom_histogram(aes(rf.2), binwidth = .001)
-
-summary(rf.1)
-summary(rf.2)
-
-######
-#SVM
-######
-
-train.data.svm <- train %>%
-  filter(validation==0) %>%
-  select(-ID, -validation) %>%
+  select(target) %>%
   as.matrix
 
-test.data.svm <- train %>%
+train.data.model <- train.1 %>%
+  filter(validation==0) %>%
+  select(-ID, -validation, -target) %>%
+  as.matrix
+train.data.watch <- train.1 %>%
   filter(validation==1) %>%
-  select(-ID, -validation) %>%
+  select(-ID, -validation, -target) %>%
   as.matrix
 
-csvm.obj = clusterSVM(x = train.data.svm[,-1], y = train.data.svm[,1], type = 1,
-                      valid.x = test.data.svm[,-1],valid.y = test.data.svm[,1], 
-                      seed = 2016, verbose = 1, centers = 8)
+dtrain <- xgb.DMatrix(data = train.data.model, label = train.data.model.y)
+dtest <- xgb.DMatrix(data = train.data.watch, label = train.data.watch.y)
 
-csvm.obj$valid.score
-summary(csvm.obj)
+watchlist <- list(train=dtrain, test=dtest)
 
-#Don't Stop Early
-##the kernel type: 1 for linear, 2 for polynomial, 3 for gaussian
-dcsvm.0 = dcSVM(x = train.data.svm[,-1], y = train.data.svm[,1],
-                k = 4, max.levels = 4, seed = 2016,
-                ##Try defaults
-                cost = 32, gamma = 2,
-                kernel = 3, early = 0, m = 800,
-                valid.x = test.data.svm[,-1], valid.y = test.data.svm[,1])
-#Early Stop
-dcsvm.1 = dcSVM(x = train.data.svm[,-1], y = train.data.svm[,1],
-                k = 4, max.levels = 4, seed = 2016, 
-                cost = 32, gamma = 2,
-                kernel = 3, early = 1, m = 800,
-                #proba = TRUE,
-                cluster.method = "mlKmeans",
-                valid.x = test.data.svm[,-1], valid.y = test.data.svm[,1])
-#Exact
-dcsvm.2 = dcSVM(x = train.data.svm[,-1], y = train.data.svm[,1],
-                k = 10, max.levels = 1, 
-                cost = 32, gamma = 2,
-                kernel = 2, early = 1, tolerance = 1e-2, m = 800, 
-                valid.x = test.data.svm[,-1], valid.y = test.data.svm[,1])
 
-dcsvm.0$valid.score
-dcsvm.1$valid.score
-dcsvm.2$valid.score
+bst.2a <- xgb.train(data = dtrain, 
+                   watchlist = watchlist,
+                   max.depth = 10, eta = .04, nround = 50,
+                   verbose = 1,
+                   nthread = 8,
+                   objective = "binary:logistic")
+bst.3a <- xgb.train(data = dtrain, 
+                   watchlist = watchlist,
+                   max.depth = 9, eta = .03, nround = 50,
+                   verbose = 1,
+                   nthread = 8,
+                   objective = "binary:logistic")
 
-preds = dcsvm.0$valid.pred
-table(preds, test.data.svm[,1])
+xgb.2a <- predict(bst.2a, train.data.watch)
+xgb.3a <- predict(bst.3a, train.data.watch)
 
-preds = dcsvm.1$valid.pred
-table(preds, test.data.svm[,1])
+ggplot(as.data.frame(xgb.2a)) + geom_histogram(aes(xgb.2a), binwidth = .001)
+ggplot(as.data.frame(xgb.2a)) + geom_histogram(aes(xgb.2a), binwidth = .001)
 
-gaterSVM.1 = gaterSVM(x = train.data.svm[,-1], y = train.data.svm[,1],
-                      hidden = 10, seed = 2016,
-                      m = 10, max.iter = 3, learningrate = 0.01, threshold = 1, stepmax = 1000,
-                      valid.x = test.data.svm[,-1], valid.y = test.data.svm[,1], verbose = TRUE)
-
-gaterSVM.1$valid.score
+quantile(xgb.2a, c(0,.01, .05, .25, .5, .75, .95, .99, 1))
+quantile(xgb.2a, c(0,.01, .05, .25, .5, .75, .95, .99, 1))
 
 ######
-#Score
+#Split Data
 ######
 
-pred.1 <- train %>%
+train.data.model.y <- train.2 %>%
+  filter(validation==0) %>%
+  select(target) %>%
+  as.matrix
+train.data.watch.y <- train.2 %>%
   filter(validation==1) %>%
-  select(ID, target) %>%
-  bind_cols(as.data.frame(gbm.1)) %>%
-  bind_cols(as.data.frame(xgb.1)) %>%
-  bind_cols(as.data.frame(xgb.2))
+  select(target) %>%
+  as.matrix
 
-save(bst.1, bst.2, file='gbm.1.RData')
+train.data.model <- train.2 %>%
+  filter(validation==0) %>%
+  select(-ID, -validation, -target) %>%
+  as.matrix
+train.data.watch <- train.2 %>%
+  filter(validation==1) %>%
+  select(-ID, -validation, -target) %>%
+  as.matrix
+
+dtrain <- xgb.DMatrix(data = train.data.model, label = train.data.model.y)
+dtest <- xgb.DMatrix(data = train.data.watch, label = train.data.watch.y)
+
+watchlist <- list(train=dtrain, test=dtest)
+
+
+bst.2b <- xgb.train(data = dtrain, 
+                   watchlist = watchlist,
+                   max.depth = 10, eta = .04, nround = 50,
+                   verbose = 1,
+                   nthread = 8,
+                   objective = "binary:logistic")
+bst.3b <- xgb.train(data = dtrain, 
+                   watchlist = watchlist,
+                   max.depth = 9, eta = .03, nround = 50,
+                   verbose = 1,
+                   nthread = 8,
+                   objective = "binary:logistic")
+
+xgb.2b <- predict(bst.2b, train.data.watch)
+xgb.3b <- predict(bst.3b, train.data.watch)
+
+ggplot(as.data.frame(xgb.2b)) + geom_histogram(aes(xgb.2b), binwidth = .001)
+ggplot(as.data.frame(xgb.3b)) + geom_histogram(aes(xgb.3b), binwidth = .001)
+
+quantile(xgb.2b, c(0,.01, .05, .25, .5, .75, .95, .99, 1))
+quantile(xgb.3b, c(0,.01, .05, .25, .5, .75, .95, .99, 1))
+
+save(bst.2, bst.3, 
+     bst.2a, bst.3a, 
+     bst.2b, bst.3b, 
+     file='gbm.2.RData')
+
+
