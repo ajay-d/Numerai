@@ -75,7 +75,7 @@ model_grid_1 <- h2o.grid(
 # print out all prediction errors and run times of the models
 model_grid_1
 
-# print out the Test MSE for all of the models
+# print out the Test AUC for all of the models
 for (model_id in model_grid_1@model_ids) {
   auc <- h2o.auc(h2o.getModel(model_id), valid = TRUE)
   print(sprintf("Test set AUC: %f", auc))
@@ -104,10 +104,10 @@ model_grid_2 <- h2o.grid(
 # print out all prediction errors and run times of the models
 model_grid_2
 
-# print out the Test MSE for all of the models
+# print out the Test AUC for all of the models
 for (model_id in model_grid_2@model_ids) {
   auc <- h2o.auc(h2o.getModel(model_id), valid = TRUE)
-  print(sprintf("Test set AUC: %f ID:%s", auc, model_id))
+  print(sprintf("Test set AUC: %f", auc))
 }
 
 save(model_grid_1, model_grid_2, 
