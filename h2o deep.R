@@ -83,20 +83,162 @@ model <- h2o.deeplearning(
  	activation="RectifierWithDropout", 
  	hidden=c(1024,1024,2048), 
   epochs=1000, 
- 	input_dropout_ratio=0.0,     ##Specifies the fraction of the features for each training row to omit from training to improve generalization. 
+ 	input_dropout_ratio=0.1,     ##Specifies the fraction of the features for each training row to omit from training to improve generalization. 
                                ##The defaultis 0, which always uses all features
-  hidden_dropout_ratios=c(.01, .05, .1),   ##amount of hidden dropout per hidden layer; .5 default
+  #hidden_dropout_ratios=c(.01, .05, .1),   ##amount of hidden dropout per hidden layer; .5 default
+  hidden_dropout_ratios=c(.25, .05, .1),   ##amount of hidden dropout per hidden layer; .5 default
   nesterov_accelerated_gradient=TRUE,
   #l1=1e-5,                     ##The default is 0, for no L1 regularization
   #max_w2=10,                   ## Specifies the maximum for the sum of the squared incoming weights for a neuron. This tuning parameter is especially useful for
                                ##unbound activation functions such as Maxout or Rectifier. The default, which is positive infinity, leaves this maximum unbounded
- 	train_samples_per_iteration=-1, 
+ 	score_validation_samples=0,
+  train_samples_per_iteration=-1, 
  	classification_stop=-1,      ##When the error is at or below this threshold, training stops
                                ## The default is 0. To disable, specify -1.
+  #stopping_rounds=0,
+  stopping_rounds=5, 
+  stopping_metric="AUC",
+  stopping_tolerance=0.001
+  )
 
-  stopping_rounds=0)
+##AUC 0.5251899
+h2o.auc(model, valid = TRUE)
 
-##AUC 0.5135972
+model <- h2o.deeplearning(
+  x = x, 
+  y = y, 
+  training_frame = data.train,
+  validation_frame = data.validate,
+ 	activation="RectifierWithDropout", 
+ 	hidden=c(1000,1000,2000), 
+  epochs=100, 
+ 	input_dropout_ratio=0.1,     ##Specifies the fraction of the features for each training row to omit from training to improve generalization. 
+                               ##The defaultis 0, which always uses all features
+  hidden_dropout_ratios=c(.2, .5, .5),   ##amount of hidden dropout per hidden layer; .5 default
+  nesterov_accelerated_gradient=TRUE,
+  l1=1e-5,                     ##The default is 0, for no L1 regularization
+ 	score_validation_samples=0,
+  train_samples_per_iteration=-1, 
+ 	classification_stop=-1,
+  stopping_rounds=5, 
+  stopping_metric="AUC",
+  stopping_tolerance=0.001
+  )
+
+##AUC 0.5372571
+h2o.auc(model, valid = TRUE)
+
+model <- h2o.deeplearning(
+  x = x, 
+  y = y, 
+  training_frame = data.train,
+  validation_frame = data.validate,
+ 	activation="RectifierWithDropout", 
+ 	hidden=c(200,200,2000), 
+  epochs=.1, 
+ 	input_dropout_ratio=0.1,     ##Specifies the fraction of the features for each training row to omit from training to improve generalization. 
+                               ##The defaultis 0, which always uses all features
+  hidden_dropout_ratios=c(.2, .5, .5),   ##amount of hidden dropout per hidden layer; .5 default
+  nesterov_accelerated_gradient=TRUE,
+  l1=1e-5,                     ##The default is 0, for no L1 regularization
+ 	score_validation_samples=0,
+  train_samples_per_iteration=-1, 
+ 	classification_stop=-1,
+  stopping_rounds=5, 
+  stopping_metric="AUC",
+  stopping_tolerance=0.001
+  )
+
+##AUC 0.4896065
+h2o.auc(model, valid = TRUE)
+
+model <- h2o.deeplearning(
+  x = x, 
+  y = y, 
+  training_frame = data.train,
+  validation_frame = data.validate,
+ 	activation="RectifierWithDropout", 
+ 	hidden=c(200,200,2000), 
+  epochs=.1, 
+ 	input_dropout_ratio=0.1,     ##Specifies the fraction of the features for each training row to omit from training to improve generalization. 
+                               ##The defaultis 0, which always uses all features
+  hidden_dropout_ratios=c(.2, .5, .5),   ##amount of hidden dropout per hidden layer; .5 default
+  nesterov_accelerated_gradient=TRUE,
+  l1=1e-5,                     ##The default is 0, for no L1 regularization
+ 	score_validation_samples=0,
+  train_samples_per_iteration=-1, 
+  stopping_rounds=5, 
+  stopping_metric="AUC",
+  stopping_tolerance=0.001
+  )
+
+##AUC 0.5132323
+h2o.auc(model, valid = TRUE)
+
+model <- h2o.deeplearning(
+  x = x, 
+  y = y, 
+  training_frame = data.train,
+  validation_frame = data.validate,
+ 	activation="RectifierWithDropout", 
+ 	hidden=c(200,200,2000), 
+  epochs=.1, 
+ 	input_dropout_ratio=0.1,     ##Specifies the fraction of the features for each training row to omit from training to improve generalization. 
+                               ##The defaultis 0, which always uses all features
+  hidden_dropout_ratios=c(.2, .5, .5),   ##amount of hidden dropout per hidden layer; .5 default
+  nesterov_accelerated_gradient=TRUE,
+  l1=1e-5,                     ##The default is 0, for no L1 regularization
+ 	score_validation_samples=0,
+  stopping_rounds=5, 
+  stopping_metric="AUC",
+  stopping_tolerance=0.001
+  )
+
+##AUC 0.5241154
+h2o.auc(model, valid = TRUE)
+
+model <- h2o.deeplearning(
+  x = x, 
+  y = y, 
+  training_frame = data.train,
+  validation_frame = data.validate,
+ 	activation="RectifierWithDropout", 
+ 	hidden=c(1000,1000,2000), 
+  epochs=100, 
+ 	input_dropout_ratio=0.1,     ##Specifies the fraction of the features for each training row to omit from training to improve generalization. 
+                               ##The defaultis 0, which always uses all features
+  hidden_dropout_ratios=c(.2, .5, .5),   ##amount of hidden dropout per hidden layer; .5 default
+  nesterov_accelerated_gradient=TRUE,
+  l1=1e-5,                     ##The default is 0, for no L1 regularization
+ 	score_validation_samples=0,
+  stopping_rounds=5, 
+  stopping_metric="AUC",
+  stopping_tolerance=0.001
+  )
+
+##AUC 0.5350169
+h2o.auc(model, valid = TRUE)
+
+model <- h2o.deeplearning(
+  x = x, 
+  y = y, 
+  training_frame = data.train,
+  validation_frame = data.validate,
+ 	activation="RectifierWithDropout", 
+ 	hidden=c(200,200,2000), 
+  epochs=100, 
+ 	input_dropout_ratio=0.1,     ##Specifies the fraction of the features for each training row to omit from training to improve generalization. 
+                               ##The defaultis 0, which always uses all features
+  hidden_dropout_ratios=c(.2, .5, .5),   ##amount of hidden dropout per hidden layer; .5 default
+  nesterov_accelerated_gradient=TRUE,
+  l1=1e-5,                     ##The default is 0, for no L1 regularization
+ 	score_validation_samples=0,
+  stopping_rounds=5, 
+  stopping_metric="AUC",
+  stopping_tolerance=0.001
+  )
+
+##AUC 0.5360882
 h2o.auc(model, valid = TRUE)
 
 pred <- h2o.predict(model, newdata = data.validate)
@@ -104,31 +246,29 @@ ggplot(as.data.frame(pred)) + geom_histogram(aes(p1), binwidth = .001)
 summary(as.data.frame(pred)$p1)
 
 ##GRID
-hidden_opt <- list(c(300,300,300), c(300,200,2000), c(300,200,100))
-act_opt <- c("Tanh","Maxout","Rectifier","RectifierWithDropout", "MaxoutWithDropout")
-input_dropout_opt=c(0.0,0.025,0.05)
-rate=c(1e-3, 5e-3, 1e-4)
-rate_annealing=c(1e-8, 1e-7, 1e-6)
+hidden_opt <- list(c(300,300,2000), c(300,200,2000), c(300,2000,200))
+#hidden_opt <- list(c(3000,3000,3000), c(3000,2000,2000), c(3000,2000,1000))
+act_opt <- c("TanhWithDropout","MaxoutWithDropout","RectifierWithDropout")
+input_dropout_opt=c(0.1,0.2)
 l1_opt <- c(1e-4, 1e-5)
 
 hyper_params_1 <- list(hidden = hidden_opt, l1 = l1_opt)
-hyper_params_2 <- list(hidden = hidden_opt, l1 = l1_opt,
-                       activation=act_opt)
 
 model_grid_1 <- h2o.grid(
   algorithm = "deeplearning",
   grid_id = 'grid_1',
-  hyper_params = hyper_params_1, 
+  hyper_params = hyper_params_1,
+  activation="RectifierWithDropout",
   x = x,
   y = y,
   distribution = "bernoulli", 
   training_frame = data.train,
   validation_frame = data.validate, 
-  score_interval = 2,
-  epochs = 100,
+  score_validation_samples = 0,
+  epochs = 200,
   #stopping_tolerance=1e-2,        ## stop when logloss does not improve by >=1% for 3 scoring events
-  #stopping_tolerance=1e-3,
-  stopping_tolerance=1e-4,
+  stopping_tolerance=1e-3,
+  #stopping_tolerance=1e-4,
   stopping_rounds = 3,
   stopping_metric = 'AUC')
 
@@ -141,6 +281,10 @@ for (model_id in model_grid_1@model_ids) {
   print(sprintf("Test set AUC: %f", auc))
 }
 
+#hidden_opt <- list(c(300,300,3000), c(300,200,2000), c(300,2000,1000))
+hidden_opt <- list(c(300,300,3000), c(200,200,2000), c(500,500,500), c(500,500,1000))
+hyper_params_2 <- list(hidden = hidden_opt, l1 = l1_opt,
+                       activation=act_opt)
 
 model_grid_2 <- h2o.grid(
   algorithm = "deeplearning",
@@ -168,12 +312,40 @@ for (model_id in model_grid_2@model_ids) {
   print(sprintf("Test set AUC: %f ID:%s", auc, model_id))
 }
 
-#m <- h2o.getModel(model_grid_1@model_ids[[1]])
 
-#model_path <- h2o.saveModel(object = m, path=getwd(), force = TRUE)
-#h2o.saveModel(object = model, force = TRUE)
+act_opt <- c("Tanh","Maxout","Rectifier","TanhWithDropout","MaxoutWithDropout","RectifierWithDropout")
+hyper_params_3 <- list(activation=act_opt)
 
-save(model_grid_1, 
+model_grid_3 <- h2o.grid(
+  algorithm = "deeplearning",
+  grid_id = 'grid_3',
+  hyper_params = hyper_params_3, 
+  x = x,
+  y = y,
+  distribution = "bernoulli", 
+  training_frame = data.train,
+  validation_frame = data.validate, 
+  score_interval = 2,
+  epochs = 500,
+  hidden = c(100,500,1000),
+  input_dropout_ratio=0.1,
+  #stopping_tolerance=1e-2,        ## stop when logloss does not improve by >=1% for 3 scoring events
+  #stopping_tolerance=1e-3,
+  stopping_tolerance=1e-4,
+  stopping_rounds = 3,
+  stopping_metric = 'AUC')
+
+# print out all prediction errors and run times of the models
+model_grid_3
+
+# print out the Test MSE for all of the models
+for (model_id in model_grid_3@model_ids) {
+  auc <- h2o.auc(h2o.getModel(model_id), valid = TRUE)
+  print(sprintf("Test set AUC: %f ID:%s", auc, model_id))
+}
+
+
+save(model_grid_1, model_grid_2, model_grid_3, 
      file='deep.1.RData')
 
 h2o.shutdown(prompt = FALSE)
