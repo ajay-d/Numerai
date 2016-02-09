@@ -20,6 +20,8 @@ localH2O <- h2o.init(ip = 'localhost', nthreads=10, max_mem_size = '64g')
 train <- read_csv("train_new.csv.gz")
 test <- read_csv("test_new.csv.gz")
 
+set.seed(2016)
+
 ######
 #Deep
 ######
@@ -102,7 +104,7 @@ ggplot(as.data.frame(pred)) + geom_histogram(aes(p1), binwidth = .001)
 summary(as.data.frame(pred)$p1)
 
 ##GRID
-hidden_opt <- list(c(300,300), c(300,100,50), c(300,200,100))
+hidden_opt <- list(c(300,300,300), c(300,200,2000), c(300,200,100))
 act_opt <- c("Tanh","Maxout","Rectifier","RectifierWithDropout", "MaxoutWithDropout")
 input_dropout_opt=c(0.0,0.025,0.05)
 rate=c(1e-3, 5e-3, 1e-4)
@@ -115,6 +117,7 @@ hyper_params_2 <- list(hidden = hidden_opt, l1 = l1_opt,
 
 model_grid_1 <- h2o.grid(
   algorithm = "deeplearning",
+  grid_id = 'grid_1',
   hyper_params = hyper_params_1, 
   x = x,
   y = y,
@@ -141,6 +144,7 @@ for (model_id in model_grid_1@model_ids) {
 
 model_grid_2 <- h2o.grid(
   algorithm = "deeplearning",
+  grid_id = 'grid_2',
   hyper_params = hyper_params_2, 
   x = x,
   y = y,
@@ -164,11 +168,13 @@ for (model_id in model_grid_2@model_ids) {
   print(sprintf("Test set AUC: %f ID:%s", auc, model_id))
 }
 
-m <- h2o.getModel(model_id)
+#m <- h2o.getModel(model_grid_1@model_ids[[1]])
 
-model_path <- h2o.saveModel(object = m, path=getwd(), force = TRUE)
-h2o.saveModel(object = model, force = TRUE)
+#model_path <- h2o.saveModel(object = m, path=getwd(), force = TRUE)
+#h2o.saveModel(object = model, force = TRUE)
 
+save(model_grid_1, 
+     file='deep.1.RData')
 
 h2o.shutdown(prompt = FALSE)
 
