@@ -348,5 +348,11 @@ for (model_id in model_grid_3@model_ids) {
 save(model_grid_1, model_grid_2, model_grid_3, 
      file='deep.1.RData')
 
+m <- h2o.getModel(model_grid_1@model_ids[[1]])
+pred <- h2o.predict(m, newdata = data.validate)
+ggplot(as.data.frame(pred)) + geom_histogram(aes(p1), binwidth = .001)
+summary(as.data.frame(pred)$p1)
+h2o.auc(m, valid = TRUE)
+
 h2o.shutdown(prompt = FALSE)
 

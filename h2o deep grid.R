@@ -42,14 +42,21 @@ data.validate <- train %>%
 x <- setdiff(names(data.train), 'target')
 y <- 'target'
 
+data.train.all <- train %>%
+  select(-ID, -validation) %>%
+  mutate(target=as.factor(target)) %>%
+  as.h2o
+
 ######
 #Grid
 ######
 
-hidden_opt <- list(c(200,200,2000), c(500,500,2000), c(1000,1000,2000))
+hidden_opt <- list(c(200,200,2000), c(500,500,2000), c(1000,2000), c(1000,1000))
 act_opt <- c("TanhWithDropout","MaxoutWithDropout","RectifierWithDropout")
 input_dropout_opt=c(0.1,0.2)
-l1_opt <- c(1e-4, 1e-5)
+l1_opt <- c(1e-6, 1e-5)
+stopping_rounds_opt <- c(0,3,4,5)
+stopping_tol_opt <- c(1e-2, 1e-3, 1e-4)
 
 hyper_params_1 <- list(hidden = hidden_opt, l1 = l1_opt)
 
@@ -81,8 +88,39 @@ for (model_id in model_grid_1@model_ids) {
   print(sprintf("Test set AUC: %f", auc))
 }
 
+##Up Epochs and lower stopping tol
+model_grid_1a <- h2o.grid(
+  algorithm = "deeplearning",
+  grid_id = 'grid_1a',
+  hyper_params = hyper_params_1,
+  activation="RectifierWithDropout",
+  input_dropout_ratio=0.1,
+  x = x,
+  y = y,
+  distribution = "bernoulli", 
+  training_frame = data.train,
+  validation_frame = data.validate, 
+  score_validation_samples = 0,
+  epochs = 200,
+  #stopping_tolerance=1e-2,        ## stop when logloss does not improve by >=1% for 3 scoring events
+  #stopping_tolerance=1e-3,
+  stopping_tolerance=1e-4,
+  stopping_rounds = 5,
+  stopping_metric = 'AUC')
+
+# print out all prediction errors and run times of the models
+model_grid_1a
+
+# print out the Test AUC for all of the models
+for (model_id in model_grid_1a@model_ids) {
+  auc <- h2o.auc(h2o.getModel(model_id), valid = TRUE)
+  print(sprintf("Test set AUC: %f", auc))
+}
+
 hyper_params_2 <- list(hidden = hidden_opt, l1 = l1_opt,
-                       activation=act_opt,input_dropout_ratio=input_dropout_opt)
+                       activation=act_opt,input_dropout_ratio=input_dropout_opt,
+                       stopping_rounds=stopping_rounds_opt,
+                       stopping_tolerance=stopping_tol_opt)
 
 model_grid_2 <- h2o.grid(
   algorithm = "deeplearning",
@@ -95,10 +133,6 @@ model_grid_2 <- h2o.grid(
   validation_frame = data.validate, 
   score_validation_samples = 0,
   epochs = 100,
-  #stopping_tolerance=1e-2,        ## stop when logloss does not improve by >=1% for 3 scoring events
-  stopping_tolerance=1e-3,
-  #stopping_tolerance=1e-4,
-  stopping_rounds = 5,
   stopping_metric = 'AUC')
 
 # print out all prediction errors and run times of the models
@@ -110,5 +144,18 @@ for (model_id in model_grid_2@model_ids) {
   print(sprintf("Test set AUC: %f", auc))
 }
 
-save(model_grid_1, model_grid_2, 
-     file='deep_grid_1_2.RData')
+
+#####
+#Save models
+######
+
+
+m1 <- h2o.getModel(model_grid_1@model_ids[[3]])
+model_path_1 <- h2o.saveModel(object = m1, path="C:\\Users\\adeonari\\Downloads\\Numerai", force = TRUE)
+h2o.auc(m1, valid = TRUE)
+print(model_path_1)
+
+m2 <- h2o.getModel(model_grid_1@model_ids[[4]])
+model_path_2 <- h2o.saveModel(object = m2, path="C:\\Users\\adeonari\\Downloads\\Numerai", force = TRUE)
+h2o.auc(m2, valid = TRUE)
+print(model_path_2)
